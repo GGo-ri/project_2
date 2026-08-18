@@ -1,0 +1,321 @@
+:root {
+    --bg-color: #f5f6fa;
+    --card-bg: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    
+    --p1-purple: #6c5ce7;
+    --p2-orange: #ff7675;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 30px;
+}
+
+.dashboard-container {
+    width: 100%;
+    max-width: 1150px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 25px;
+}
+
+/* 그래프 카드 */
+.chart-card {
+    background: var(--card-bg);
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.main-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.5px;
+}
+
+.chart-legend {
+    display: flex;
+    gap: 15px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #475569;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.p1-dot { background-color: var(--p1-purple); }
+.p2-dot { background-color: var(--p2-orange); }
+
+.chart-container {
+    position: relative;
+    width: 100%;
+    height: 320px;
+}
+
+/* 실시간 수치, AGV 상태 */
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.panel-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.stat-card {
+    border-radius: 20px;
+    padding: 25px;
+    color: #ffffff;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    height: 120px;
+}
+
+.plant1-card {
+    background: linear-gradient(135deg, #7c52f6 0%, #5b42f3 100%);
+}
+
+.plant2-card {
+    background: linear-gradient(135deg, #ff7a59 0%, #ff5242 100%);
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+}
+
+/* AGV 상태 박스 폰트 */
+.agv-box {
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.agv-status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.agv-label {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.agv-badge {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-main);
+    padding: 4px 10px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+/* 팝업 폰트 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+.modal-content {
+    background: #ffffff;
+    padding: 32px 28px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 14px;
+}
+
+.modal-body {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #475569;
+    line-height: 1.6;
+}
+
+body.warning-flash {
+    animation: flash 1s infinite alternate;
+}
+
+@keyframes flash {
+    from { background-color: var(--bg-color); }
+    to { background-color: #fca5a5; }
+}
+
+/* 버튼 2개 가로 배치 레이아웃 */
+.btn-group {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.test-btn, .history-btn {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.test-btn {
+    background-color: #2d3748;
+    color: #ffffff;
+}
+
+.test-btn:hover {
+    background-color: #1a202c;
+}
+
+.history-btn {
+    background-color: #edf2f7;
+    color: #2d3748;
+}
+
+.history-btn:hover {
+    background-color: #e2e8f0;
+}
+
+/* 급수 기록 */
+.history-modal-content {
+    max-width: 500px !important;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 0.9rem;
+}
+
+.history-table th, .history-table td {
+    padding: 10px 12px;
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.history-table th {
+    background-color: #f7fafc;
+    color: #4a5568;
+    font-weight: 700;
+}
+
+.history-table td {
+    color: #2d3748;
+}
+
+/* 성공 상태 */
+.status-success {
+    color: #38a169;
+    font-weight: 700;
+    background-color: #f0fff4;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.close-btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    background-color: #e2e8f0;
+    color: #4a5568;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.close-btn:hover {
+    background-color: #cbd5e0;
+}
+
+/* 모바일 및 테블릿 대응 */
+@media (max-width: 900px) {
+    body {
+        padding: 15px;
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
