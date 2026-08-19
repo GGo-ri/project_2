@@ -55,6 +55,12 @@ const soilMoistureChart = new Chart(ctx, {
                         chart.data.datasets[1].data.push({ x: Date.now(), y: lastP2 });
                     }
                 },
+                time: {
+                    displayFormats: {
+                        second: 'HH:mm:ss',
+                        minute: 'HH:mm'
+                    }
+                },
                 ticks: {
                     source: 'auto'
                 }
