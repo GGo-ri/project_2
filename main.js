@@ -1,4 +1,4 @@
-const SERVER_IP = 'http://192.168.0.51:8000'; 
+const SERVER_IP = 'http://192.168.0.51:8000';
 
 let lastP1 = 50;
 let lastP2 = 50;
@@ -8,7 +8,6 @@ const ctx = document.getElementById('soilMoistureChart').getContext('2d');
 const soilMoistureChart = new Chart(ctx, {
     type: 'line',
     data: {
-        labels: [],
         datasets: [
             {
                 label: '화분 1',
@@ -18,7 +17,7 @@ const soilMoistureChart = new Chart(ctx, {
                 borderWidth: 2,
                 tension: 0.3,
                 fill: 'origin',
-                spanGaps: true
+                pointRadius: 3
             },
             {
                 label: '화분 2',
@@ -28,43 +27,52 @@ const soilMoistureChart = new Chart(ctx, {
                 borderWidth: 2,
                 tension: 0.3,
                 fill: 'origin',
-                spanGaps: true
+                pointRadius: 3
             }
         ]
     },
     options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: {
-            duration: 400,
-            easing: 'linear'
-        },
+        interaction: { intersect: false },
         plugins: {
-            legend: {
-                display: false
+            legend: { display: false },
+            streaming: {
+                frameRate: 30
             }
         },
         scales: {
             x: {
-                type: 'category',
-                bounds: 'data'
+                type: 'realtime',
+                realtime: {
+                    duration: 20000,
+                    refresh: 2500,
+                    delay: 3000,
+                    pause: false,
+                    ttl: 25000,
+                    onRefresh: chart => {
+                        chart.data.datasets[0].data.push({ x: Date.now(), y: lastP1 });
+                        chart.data.datasets[1].data.push({ x: Date.now(), y: lastP2 });
+                    }
+                },
+                ticks: {
+                    source: 'auto'
+                }
             },
-            y: { 
-                min: 0, 
+            y: {
+                min: 0,
                 max: 100,
                 ticks: {
                     stepSize: 25,
-                    callback: function(value) {
-                        return value + '%';
-                    }
+                    callback: value => value + '%'
                 }
             }
         }
     }
 });
 
-// 실시간 토양 수분 데이터 동기화
-async function addMoistureData() {
+// 서버 값 갱신
+async function fetchMoistureData() {
     try {
         const res = await fetch(`${SERVER_IP}/api/dashboard`);
         if (res.ok) {
@@ -85,39 +93,15 @@ async function addMoistureData() {
         console.warn("서버 응답 대기 중 - 기존 측정값 유지");
     }
 
-    const validP1 = Number(lastP1) || 50;
-    const validP2 = Number(lastP2) || 50;
-
     const p1ValElem = document.getElementById('p1Val');
     const p2ValElem = document.getElementById('p2Val');
 
-    if (p1ValElem) p1ValElem.innerText = `${validP1}%`;
-    if (p2ValElem) p2ValElem.innerText = `${validP2}%`;
-
-    const now = new Date();
-    let timeString = now.toLocaleTimeString('ko-KR', { 
-        hour12: false, 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit' 
-    });
-
-    while (soilMoistureChart.data.labels.includes(timeString)) {
-        timeString += ' ';
-    }
-
-    soilMoistureChart.data.labels.push(timeString);
-    soilMoistureChart.data.datasets[0].data.push(validP1);
-    soilMoistureChart.data.datasets[1].data.push(validP2);
-
-    if (soilMoistureChart.data.labels.length > 8) {
-        soilMoistureChart.data.labels.shift();
-        soilMoistureChart.data.datasets[0].data.shift();
-        soilMoistureChart.data.datasets[1].data.shift();
-    }
-
-    soilMoistureChart.update();
+    if (p1ValElem) p1ValElem.innerText = `${lastP1}%`;
+    if (p2ValElem) p2ValElem.innerText = `${lastP2}%`;
 }
+
+fetchMoistureData();
+setInterval(fetchMoistureData, 2500);
 
 // 급수 기록
 const historyData = [
@@ -128,7 +112,7 @@ const historyData = [
 function openHistoryModal() {
     const tableBody = document.getElementById('historyTableBody');
     if (!tableBody) return;
-    
+
     tableBody.innerHTML = '';
 
     historyData.forEach(item => {
@@ -154,7 +138,7 @@ function closeHistoryModal() {
 let isRunning = false;
 
 function runFullScenario() {
-    if (isRunning) return; 
+    if (isRunning) return;
     isRunning = true;
 
     const agvBadge = document.getElementById('agvBadge');
@@ -229,10 +213,7 @@ function runFullScenario() {
             agvBadge.innerText = '[대기 상태]';
             agvBadge.style.color = '#1e293b';
         }
-        
+
         isRunning = false;
     }, 15500);
 }
-
-addMoistureData();
-setInterval(addMoistureData, 2500);
