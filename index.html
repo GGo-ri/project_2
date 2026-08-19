@@ -42,6 +42,8 @@
                         <span class="stat-label">화분 1 토양 수분</span>
                         <h2 class="stat-value" id="p1Val">--%</h2>
                     </div>
+                    <!-- 화분 1 수동 급수 버튼 추가 -->
+                    <button type="button" class="btn-water" onclick="triggerManualWatering(1)">💧 수동 급수</button>
                 </div>
 
                 <!-- 화분 2 -->
@@ -50,6 +52,8 @@
                         <span class="stat-label">화분 2 토양 수분</span>
                         <h2 class="stat-value" id="p2Val">--%</h2>
                     </div>
+                    <!-- 화분 2 수동 급수 버튼 추가 -->
+                    <button type="button" class="btn-water" onclick="triggerManualWatering(2)">💧 수동 급수</button>
                 </div>
 
                 <!-- AGV 상태 및 이벤트, 로그 확인 버튼 -->
@@ -92,7 +96,7 @@
     <!-- 이벤트 팝업 -->
     <div class="modal-overlay" id="eventModal">
         <div class="modal-content">
-            <div class="modal-header" id="modalTitle">⚠️ 시스템 알림</div>
+            <div class="modal-header" id="modalTitle"></div>
             <div class="modal-body" id="modalMessage"></div>
         </div>
     </div>
