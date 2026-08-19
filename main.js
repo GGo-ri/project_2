@@ -57,8 +57,8 @@ const soilMoistureChart = new Chart(ctx, {
                 },
                 time: {
                     displayFormats: {
-                        second: 'HH:mm:ss',
-                        minute: 'HH:mm'
+                        second : 'HH:mm:ss',
+                        minute : 'HH:mm'
                     }
                 },
                 ticks: {
@@ -77,6 +77,38 @@ const soilMoistureChart = new Chart(ctx, {
     }
 });
 
+// -------------------------------------------------------------
+// 다크모드 토글
+function applyChartTheme(theme) {
+    const gridColor = theme === 'dark' ? 'rgba(148, 163, 184, 0.15)' : 'rgba(100, 116, 139, 0.1)';
+    const tickColor = theme === 'dark' ? '#94a3b8' : '#64748b';
+
+    soilMoistureChart.options.scales.x.ticks.color = tickColor;
+    soilMoistureChart.options.scales.x.grid = { color: gridColor };
+    soilMoistureChart.options.scales.y.ticks.color = tickColor;
+    soilMoistureChart.options.scales.y.grid = { color: gridColor };
+    soilMoistureChart.update('none');
+}
+
+function toggleTheme() {
+    const root = document.documentElement;
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    const newTheme = isDark ? 'light' : 'dark';
+
+    if (newTheme === 'dark') {
+        root.setAttribute('data-theme', 'dark');
+    } else {
+        root.removeAttribute('data-theme');
+    }
+
+    localStorage.setItem('theme', newTheme);
+    applyChartTheme(newTheme);
+}
+
+// 페이지 로드 시 현재 테마에 맞춰 차트 색상도 맞춰줌
+applyChartTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+
+// -------------------------------------------------------------
 // 서버 값 갱신
 async function fetchMoistureData() {
     try {
@@ -109,6 +141,7 @@ async function fetchMoistureData() {
 fetchMoistureData();
 setInterval(fetchMoistureData, 2500);
 
+// -------------------------------------------------------------
 // 급수 기록
 async function openHistoryModal() {
     const tableBody = document.getElementById('historyTableBody');
@@ -164,6 +197,7 @@ function closeHistoryModal() {
     if (modal) modal.style.display = 'none';
 }
 
+// -------------------------------------------------------------
 // 이벤트 테스트
 let isRunning = false;
 
