@@ -104,29 +104,53 @@ fetchMoistureData();
 setInterval(fetchMoistureData, 2500);
 
 // 급수 기록
-const historyData = [
-    { time: '2026-08-18 14:20:15', plant: '화분 1', result: '성공' },
-    { time: '2026-08-18 15:05:42', plant: '화분 2', result: '성공' }
-];
-
-function openHistoryModal() {
+async function openHistoryModal() {
     const tableBody = document.getElementById('historyTableBody');
+    const modal = document.getElementById('historyModal');
+
     if (!tableBody) return;
 
-    tableBody.innerHTML = '';
-
-    historyData.forEach(item => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${item.time}</td>
-            <td>${item.plant}</td>
-            <td><span class="status-success">${item.result}</span></td>
-        `;
-        tableBody.appendChild(row);
-    });
-
-    const modal = document.getElementById('historyModal');
     if (modal) modal.style.display = 'flex';
+    tableBody.innerHTML = '<tr><td colspan = "3" style = "text-align: center;">기록을 불러오는 중...</td></tr>';
+
+    try {
+        const response = await fetch(`${SERVER_IP}/api/watering/log`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP 오류! 상태 코드 : ${response.status}`);
+        }
+
+        const logs = await response.json();
+
+        tableBody.innerHTML = '';
+
+        if (!Array.isArray(logs) || logs.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan = "3" style="text-align: center;">급수 기록이 없습니다.</td></tr>';
+            return;
+        }
+
+        const sortedLogs = [...logs].reverse();
+
+        sortedLogs.forEach(item => {
+            const row = document.createElement('tr');
+
+            const formattedTime = item.created_at ? item.created_at.replace('T', ' ') : '-';
+
+            const isSuccess = item.result === 'SUCCESS';
+            const resultText = isSuccess ? '성공' : '실패';
+            const resultClass = isSuccess ? 'status-success' : 'status-fail';
+
+            row.innerHTML = `
+                <td>${formattedTime}</td>
+                <td>화분 ${item.plant_id}</td>
+                <td><span class = "${resultClass}">${resultText}</span></td>
+            `;
+            tableBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('급수 기록 데이터 불러오기 실패:', error);
+        tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #ff7675;">기록을 불러오지 못했습니다.</td></tr>';
+    }
 }
 
 function closeHistoryModal() {
