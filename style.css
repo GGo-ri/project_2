@@ -292,6 +292,15 @@ body.warning-flash {
     border-radius: 6px;
 }
 
+/* 실패 상태 */
+.status-fail {
+    color: #e53e3e;
+    font-weight: 700;
+    background-color: #fff5f5;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
 .close-btn {
     width: 100%;
     padding: 10px;
