@@ -6,7 +6,7 @@
     <title>AGV 자동 급수 모니터링 시스템</title>
     <link rel="stylesheet" href="style.css">
 
-    <!-- 테마 초기화: 화면이 그려지기 전에 미리 적용해서 깜빡임 방지 -->
+    <!-- 테마 초기화: 화면 그려지기 전에 미리 적용해서 깜빡임 방지 -->
     <script>
         (function () {
             const savedTheme = localStorage.getItem('theme');
@@ -21,7 +21,7 @@
     <!-- Chart.js 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2"></script>
     <script src="main.js" defer></script>
 </head>
 <body>
@@ -51,14 +51,50 @@
             <section class="card chart-card">
                 <div class="chart-header">
                     <h2 class="main-title">AGV 자동 급수 모니터링</h2>
-                    <div class="chart-legend">
-                        <span class="legend-item"><span class="dot p1-dot"></span>화분 1</span>
-                        <span class="legend-item"><span class="dot p2-dot"></span>화분 2</span>
+                    <div class="header-controls">
+                        <div class="chart-legend">
+                            <span class="legend-item"><span class="dot p1-dot"></span>화분 1</span>
+                            <span class="legend-item"><span class="dot p2-dot"></span>화분 2</span>
+                        </div>
+
+                        <div class="date-select-wrapper">
+                            <button type="button" class="date-picker-btn" id="datePickerBtn" onclick="toggleCalendar()">날짜 선택</button>
+                            <div class="calendar-popup" id="calendarPopup" hidden>
+                                <div class="calendar-header">
+                                    <button type="button" class="calendar-nav" onclick="changeCalendarMonth(-1)">‹</button>
+                                    <span class="calendar-month-label" id="calendarMonthLabel"></span>
+                                    <button type="button" class="calendar-nav" onclick="changeCalendarMonth(1)">›</button>
+                                </div>
+                                <div class="calendar-weekdays">
+                                    <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                                </div>
+                                <div class="calendar-days" id="calendarDays"></div>
+                            </div>
+                        </div>
+
+                        <div class="interval-toggle disabled" id="intervalToggle" onclick="toggleHistoryInterval()" title="5분 단위 / 1시간 단위 전환 (날짜 선택 후 사용 가능)">
+                            <span class="interval-label left">5분</span>
+                            <span class="interval-switch">
+                                <span class="interval-knob"></span>
+                            </span>
+                            <span class="interval-label right">1시간</span>
+                        </div>
+
+                        <span class="live-badge" id="liveBadge" onclick="setLiveMode(true)" title="실시간으로 전환">
+                            <span class="live-dot"></span>LIVE
+                        </span>
                     </div>
                 </div>
 
+                <div class="current-range-label" id="currentRangeLabel"></div>
+
                 <div class="chart-container">
                     <canvas id="soilMoistureChart"></canvas>
+                </div>
+
+                <div class="history-nav" id="historyNav" hidden>
+                    <button type="button" class="history-nav-btn" id="historyPrevBtn" onclick="handlePrevClick()">‹ 이전 구간</button>
+                    <button type="button" class="history-nav-btn" id="historyNextBtn" onclick="handleNextClick()">다음 구간 ›</button>
                 </div>
             </section>
 
@@ -71,9 +107,10 @@
                     <div class="stat-info">
                         <span class="stat-label">화분 1 토양 수분</span>
                         <h2 class="stat-value" id="p1Val">--%</h2>
+                        <span class="watering-status" id="wateringStatus1"></span>
                     </div>
                     <!-- 화분 1 수동 급수 버튼 -->
-                    <button type="button" class="btn-water" onclick="triggerManualWatering(1)">💧 수동 급수</button>
+                    <button type="button" class="btn-water" id="waterBtn1" onclick="triggerManualWatering(1)">💧 수동 급수</button>
                 </div>
 
                 <!-- 화분 2 -->
@@ -81,54 +118,47 @@
                     <div class="stat-info">
                         <span class="stat-label">화분 2 토양 수분</span>
                         <h2 class="stat-value" id="p2Val">--%</h2>
+                        <span class="watering-status" id="wateringStatus2"></span>
                     </div>
                     <!-- 화분 2 수동 급수 버튼 -->
-                    <button type="button" class="btn-water" onclick="triggerManualWatering(2)">💧 수동 급수</button>
+                    <button type="button" class="btn-water" id="waterBtn2" onclick="triggerManualWatering(2)">💧 수동 급수</button>
                 </div>
 
-                <!-- AGV 상태 및 이벤트, 로그 확인 버튼 -->
-                <div class="agv-box">
-                    <div class="agv-status-row">
-                        <span class="agv-label">AGV 상태</span>
-                        <span class="agv-badge" id="agvBadge">[대기 상태]</span>
-                    </div>
-                    <div class="btn-group">
-                        <button type="button" class="test-btn" onclick="runFullScenario()">이벤트 테스트</button>
-                        <button type="button" class="history-btn" onclick="openHistoryModal()">급수 기록</button>
+                <!-- AGV 상태 (한 줄짜리 카드 + 테스트 버튼) -->
+                <div class="agv-status-card">
+                    <span class="agv-label">AGV 상태</span>
+                    <button type="button" class="agv-test-btn" onclick="runAgvTest()" title="상태 전환 테스트">테스트</button>
+                    <span class="agv-status-badge" id="agvStatusBadge">
+                        <span class="agv-dot agv-dot-idle" id="agvDot"></span>
+                        <span id="agvStatusText">대기</span>
+                    </span>
+                </div>
+
+                <!-- 급수 기록 (상시 표시, 로그처럼 스크롤) -->
+                <div class="watering-log-card">
+                    <div class="watering-log-title">급수 기록</div>
+                    <div class="watering-log-list" id="wateringLogList">
+                        <div class="log-empty">기록을 기다리는 중...</div>
                     </div>
                 </div>
 
             </section>
 
         </main>
-    </div>
 
-    <!-- 급수 기록 -->
-    <div class="modal-overlay" id="historyModal">
-        <div class="modal-content history-modal-content">
-            <div class="modal-header">급수 기록</div>
-            <div class="modal-body">
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>급수 완료 시간</th>
-                            <th>대상 화분</th>
-                            <th>급수 결과</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyTableBody"></tbody>
-                </table>
+        <!-- 실시간 시스템 로그 -->
+        <section class="card log-card">
+            <div class="log-header">
+                <h3 class="panel-title">실시간 시스템 로그</h3>
             </div>
-            <button type="button" class="close-btn" onclick="closeHistoryModal()">닫기</button>
-        </div>
-    </div>
+            <div class="log-terminal" id="logTerminal">
+                <div class="log-terminal-title">SYSTEM LOG</div>
+                <div class="log-lines" id="logLines">
+                    <div class="log-empty">로그를 기다리는 중...</div>
+                </div>
+            </div>
+        </section>
 
-    <!-- 이벤트 팝업 -->
-    <div class="modal-overlay" id="eventModal">
-        <div class="modal-content">
-            <div class="modal-header" id="modalTitle"></div>
-            <div class="modal-body" id="modalMessage"></div>
-        </div>
     </div>
 
 </body>
