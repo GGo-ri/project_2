@@ -119,9 +119,9 @@ const soilMoistureChart = new Chart(ctx, {
 });
 
 // ==================== 실시간(LIVE) 창/페이지 계산 ====================
-const LIVE_PUSH_INTERVAL_MS = 5000; // 테스트용 5초 (실제 운영 시 60000으로)
+const LIVE_PUSH_INTERVAL_MS = 10000; // 테스트용 10초 (실제 운영 시 60000으로)
 const VISIBLE_POINT_COUNT = 12;
-const MIN_VISIBLE_WINDOW_MS = 30 * 60 * 1000;
+const MIN_VISIBLE_WINDOW_MS = 2 * 60 * 1000;
 const VISIBLE_WINDOW_MS = Math.max(LIVE_PUSH_INTERVAL_MS * VISIBLE_POINT_COUNT, MIN_VISIBLE_WINDOW_MS);
 const MIN_LIVE_AXIS_RANGE_MS = 60 * 1000; // 점이 1~2개뿐일 때 라벨 깨짐 방지용 최소 폭
 
@@ -718,6 +718,20 @@ loadHistoryForDate(todayStr());
 
 // ==================== 실시간 시스템 로그 ====================
 let lastLogKey = null;
+let screenFlashTimer = null;
+
+// ERROR 로그가 들어오면 화면 전체를 1~2회 번쩍여서 하단 로그 패널로 시선을 유도
+function triggerScreenFlash() {
+    const overlay = document.getElementById('screenFlashOverlay');
+    if (!overlay) return;
+
+    overlay.classList.remove('active');
+    void overlay.offsetWidth; // 리플로우 강제 발생시켜 애니메이션 재시작 가능하게 함
+    overlay.classList.add('active');
+
+    clearTimeout(screenFlashTimer);
+    screenFlashTimer = setTimeout(() => overlay.classList.remove('active'), 1000); // 0.5s x 2회
+}
 
 function formatLogTime(isoString) {
     const d = new Date(isoString);
@@ -737,7 +751,15 @@ function appendLogLine(log) {
 
     const line = document.createElement('div');
     line.className = `log-line level-${level.toLowerCase()}`;
-    if (isError) line.classList.add('flash');
+
+    // 로그 자체의 발생 시각이 최근(15초 이내)일 때만 화면 전체를 번쩍임
+    // (페이지를 처음 열 때 서버에 이미 쌓여있던 과거 로그까지 "새로 추가됨"으로 착각해서
+    //  깜빡이지 않도록, 실제 로그 시각을 기준으로 판단)
+    if (isError) {
+        const logTime = new Date(log.created_at || log.timestamp).getTime();
+        const isRecent = !isNaN(logTime) && (Date.now() - logTime) < 15000;
+        if (isRecent) triggerScreenFlash();
+    }
 
     const time = document.createElement('span');
     time.className = 'log-time';
@@ -798,11 +820,22 @@ async function pollSystemLogs() {
 pollSystemLogs();
 setInterval(pollSystemLogs, 700);
 
-// ==================== 화분 수치 폴링 ====================
+// ==================== 화분 수치 폴링 + 연결 상태 배지 ====================
+let connFailureCount = 0;
+const CONN_FAILURE_THRESHOLD = 2; // 연속 2번 실패해야 표시 (일시적 지연은 무시)
+
+function setConnBadge(visible) {
+    const badge = document.getElementById('connBadge');
+    if (badge) badge.hidden = !visible;
+}
+
 async function fetchMoistureData() {
+    let success = false;
+
     try {
         const res = await fetch(`${SERVER_IP}/api/dashboard`);
         if (res.ok) {
+            success = true;
             const data = await res.json();
             if (data && Array.isArray(data.plants)) {
                 const plant1 = data.plants.find(p => p.id === 1);
@@ -814,6 +847,14 @@ async function fetchMoistureData() {
         }
     } catch (err) {
         console.warn('서버 응답 대기 중 - 기존 측정값 유지');
+    }
+
+    if (success) {
+        connFailureCount = 0;
+        setConnBadge(false);
+    } else {
+        connFailureCount += 1;
+        if (connFailureCount >= CONN_FAILURE_THRESHOLD) setConnBadge(true);
     }
 
     const p1ValElem = document.getElementById('p1Val');
