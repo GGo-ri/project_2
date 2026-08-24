@@ -26,6 +26,9 @@
 </head>
 <body>
 
+    <!-- ERROR 로그 발생 시 화면 전체가 번쩍이는 오버레이 -->
+    <div class="screen-flash-overlay" id="screenFlashOverlay"></div>
+
     <!-- 다크모드 토글 버튼 -->
     <button type="button" class="theme-toggle" id="themeToggle" aria-label="다크모드 전환" onclick="toggleTheme()">
         <svg class="icon-sun" viewBox="0 0 24 24">
@@ -82,6 +85,10 @@
 
                         <span class="live-badge" id="liveBadge" onclick="setLiveMode(true)" title="실시간으로 전환">
                             <span class="live-dot"></span>LIVE
+                        </span>
+
+                        <span class="conn-badge" id="connBadge" hidden title="서버와의 연결이 원활하지 않습니다">
+                            🔌 연결 끊김
                         </span>
                     </div>
                 </div>
