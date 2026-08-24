@@ -164,15 +164,6 @@ body {
     color: #f87171;
 }
 
-.log-line.flash {
-    animation: logErrorFlash 0.9s ease;
-}
-
-@keyframes logErrorFlash {
-    0%   { background-color: rgba(248, 113, 113, 0.35); }
-    100% { background-color: transparent; }
-}
-
 .log-empty {
     color: #475569;
     font-style: italic;
@@ -313,6 +304,43 @@ body {
     0%   { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.55); }
     70%  { box-shadow: 0 0 0 6px rgba(229, 62, 62, 0); }
     100% { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0); }
+}
+
+/* 서버 연결 끊김 배지 */
+.conn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    background-color: rgba(229, 62, 62, 0.12);
+    color: #e53e3e;
+    border: 1px solid rgba(229, 62, 62, 0.35);
+}
+
+.conn-badge[hidden] {
+    display: none;
+}
+
+/* ERROR 로그 발생 시 화면 전체가 잠깐 번쩍이는 오버레이 (로그 패널이 하단에 있어 놓치기 쉬워서) */
+.screen-flash-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(239, 68, 68, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 2000;
+}
+
+.screen-flash-overlay.active {
+    animation: screenFlashPulse 0.5s ease-in-out 2; /* 2회 반복 */
+}
+
+@keyframes screenFlashPulse {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
 }
 
 /* 날짜 선택 버튼 + 커스텀 달력 */
@@ -641,7 +669,7 @@ body {
 .agv-label {
     font-size: 0.9rem;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--text-main);
     white-space: nowrap;
 }
 
@@ -703,7 +731,7 @@ body {
 .watering-log-title {
     font-size: 0.82rem;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--text-main);
     margin-bottom: 10px;
 }
 
