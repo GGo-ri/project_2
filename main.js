@@ -652,7 +652,7 @@ function shiftLiveWindow(direction) {
     livePageIndex += direction;
 
     updateAxisWindow(); // 최신 페이지 도달 시 자동으로 추적 모드 복귀
-    soilMoistureChart.update('none');
+    soilMoistureChart.update(); // 이력 페이지 이동과 동일하게 애니메이션 켜서 부드럽게 전환
 }
 
 function switchToHistoryLastPage() {
@@ -706,15 +706,65 @@ async function loadHistoryForDate(dateStr) {
 
 // ==================== 초기 화면 ====================
 // 오늘 날짜를 과거 날짜 조회처럼 취급해서 1시간 단위 마지막 페이지를 먼저 정적으로 보여줌.
+// 단, 오늘 아직 기록된 데이터가 없으면(=시스템을 오늘 처음 켠 경우) 빈 화면 대신
+// 데이터가 있는 가장 최근 날짜(마지막으로 가동됐던 날)를 찾아서 그 마지막 페이지를 보여줌.
 // LIVE는 사용자가 버튼을 눌러야 시작됨 (5분 이력과 실시간 데이터의 해상도가 섞이지 않도록)
 isLiveMode = false;
-selectedDateStr = todayStr();
-document.getElementById('datePickerBtn').textContent = todayStr();
-document.getElementById('datePickerBtn').classList.add('has-date');
 document.getElementById('intervalToggle').classList.remove('disabled');
 updateIntervalToggleUI(); // 스위치 UI를 historyInterval 기본값(1시간)에 맞게 표시
 updateLiveUI();
-loadHistoryForDate(todayStr());
+
+async function fetchRawForDate(dateStr) {
+    if (USE_DUMMY_HISTORY) {
+        return {
+            p1: filterDummyByPlantAndDate(1, dateStr),
+            p2: filterDummyByPlantAndDate(2, dateStr),
+        };
+    }
+    return {
+        p1: await fetchHistoryFromServer(1, dateStr),
+        p2: await fetchHistoryFromServer(2, dateStr),
+    };
+}
+
+async function loadMostRecentAvailableHistory(maxDaysBack = 14) {
+    const base = new Date();
+
+    for (let i = 0; i <= maxDaysBack; i++) {
+        const d = new Date(base);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toLocaleDateString('sv-SE'); // YYYY-MM-DD
+
+        const { p1, p2 } = await fetchRawForDate(dateStr);
+
+        if (p1.length > 0 || p2.length > 0) {
+            lastHistoryRawDataP1 = p1;
+            lastHistoryRawDataP2 = p2;
+            historyPageIndex = null; // 마지막 페이지부터
+
+            selectedDateStr = dateStr;
+            const btn = document.getElementById('datePickerBtn');
+            if (btn) {
+                btn.textContent = dateStr;
+                btn.classList.add('has-date');
+            }
+
+            renderHistoryChart();
+            return;
+        }
+    }
+
+    // maxDaysBack 만큼 거슬러 올라가도 데이터가 하나도 없으면 오늘 날짜로 빈 화면 표시
+    selectedDateStr = todayStr();
+    const btn = document.getElementById('datePickerBtn');
+    if (btn) {
+        btn.textContent = todayStr();
+        btn.classList.add('has-date');
+    }
+    renderHistoryChart();
+}
+
+loadMostRecentAvailableHistory();
 
 // ==================== 실시간 시스템 로그 ====================
 let lastLogKey = null;
