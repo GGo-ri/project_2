@@ -1001,9 +1001,10 @@ async function triggerManualWatering(plantId) {
 // ==================== AGV 상태 배지 ====================
 const AGV_STATUS_MAP = {
     idle: { text: '대기', dotClass: 'agv-dot-idle' },
-    moving: { text: '이동 중', dotClass: 'agv-dot-active' },
-    watering: { text: '급수 진행 중', dotClass: 'agv-dot-active' },
-    returning: { text: '복귀 중', dotClass: 'agv-dot-active' }
+    moving: { text: '이동 중', dotClass: 'agv-dot-moving' },
+    watering: { text: '급수 진행 중', dotClass: 'agv-dot-watering' },
+    returning: { text: '복귀 중', dotClass: 'agv-dot-moving' },
+    error: { text: '오류 발생', dotClass: 'agv-dot-error' }
 };
 
 function setAgvStatus(stateKey) {
@@ -1016,17 +1017,63 @@ function setAgvStatus(stateKey) {
     text.textContent = s.text;
 }
 
-let isAgvTestRunning = false;
+// AGV 상태 배지를 두 API로 판단함
+// 1) GET /api/watering/tasks — 활성 Task가 있으면 그 진행 단계(QUEUED/MOVING/ARRIVED/WATERING)로 판단
+// 2) 활성 Task가 하나도 없으면 GET /api/agv/command로 RETURN 여부 확인 (복귀 중인지, 완전 대기인지)
+const TASK_STATE_TO_STATUS = {
+    queued: 'idle',       // 아직 출발 전 대기
+    moving: 'moving',
+    arrived: 'moving',    // 도착은 했지만 급수 시작 전 — "이동 중"과 묶어서 표시
+    watering: 'watering'
+};
 
-function runAgvTest() {
-    if (isAgvTestRunning) return;
-    isAgvTestRunning = true;
+// 더 이상 "진행 중"이 아닌, 끝난 상태로 취급할 값들 (성공/실패 둘 다 포함)
+const TERMINAL_TASK_STATES = ['completed', 'failed', 'error'];
 
-    setAgvStatus('moving');
-    setTimeout(() => setAgvStatus('watering'), 2500);
-    setTimeout(() => setAgvStatus('returning'), 5000);
-    setTimeout(() => {
-        setAgvStatus('idle');
-        isAgvTestRunning = false;
-    }, 7500);
+async function pollAgvStatusForDashboard() {
+    try {
+        const res = await fetch(`${SERVER_IP}/api/watering/tasks`);
+        if (!res.ok) return;
+
+        const tasks = await res.json();
+        if (!Array.isArray(tasks)) return;
+
+        const activeTask = tasks.find(
+            t => !TERMINAL_TASK_STATES.includes((t.status || t.state || '').toLowerCase())
+        );
+
+        if (activeTask) {
+            const state = (activeTask.status || activeTask.state || '').toLowerCase();
+            const statusKey = TASK_STATE_TO_STATUS[state];
+            if (statusKey) setAgvStatus(statusKey);
+            return;
+        }
+
+        // 활성 Task가 없을 때, 가장 최근 Task가 실패(FAILED/ERROR)로 끝났으면 "오류"로 표시
+        // (성공적으로 COMPLETED된 경우와 구분해서, 조용히 대기 처리되지 않게 함)
+        const lastTask = tasks[tasks.length - 1];
+        const lastState = lastTask ? (lastTask.status || lastTask.state || '').toLowerCase() : '';
+        if (lastState === 'failed' || lastState === 'error') {
+            setAgvStatus('error');
+            return;
+        }
+
+        // 그 외(정상 COMPLETED)엔 기존 로직대로: 일단 "복귀 중"으로 보고,
+        // command가 명확히 WAIT일 때만 "대기"로 확정
+        const cmdRes = await fetch(`${SERVER_IP}/api/agv/command`);
+        if (!cmdRes.ok) {
+            setAgvStatus('returning');
+            return;
+        }
+
+        const cmdData = await cmdRes.json();
+        const command = (cmdData.command || '').toLowerCase();
+
+        setAgvStatus(command === 'wait' ? 'idle' : 'returning');
+    } catch (err) {
+        console.warn('AGV 상태 조회 실패 - 이전 상태 유지');
+    }
 }
+
+pollAgvStatusForDashboard();
+setInterval(pollAgvStatusForDashboard, 3000);
