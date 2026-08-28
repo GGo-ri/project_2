@@ -673,25 +673,6 @@ body {
     white-space: nowrap;
 }
 
-.agv-test-btn {
-    font-family: inherit;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    background-color: var(--hover-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 999px;
-    padding: 4px 10px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.agv-test-btn:hover {
-    filter: brightness(0.95);
-    border-color: var(--p1-purple);
-}
-
 .agv-status-badge {
     margin-left: auto;
     display: inline-flex;
@@ -713,9 +694,30 @@ body {
     background-color: var(--text-muted);
 }
 
-.agv-dot-active {
+/* 이동 중 / 복귀 중 - 초록색, 부드럽게 깜빡임 */
+.agv-dot-moving {
     background-color: #4ade80;
     box-shadow: 0 0 6px rgba(74, 222, 128, 0.7);
+    animation: agvDotPulse 1.4s ease-in-out infinite;
+}
+
+/* 급수 진행 중 - 노란색, 부드럽게 깜빡임 */
+.agv-dot-watering {
+    background-color: #fbbf24;
+    box-shadow: 0 0 6px rgba(251, 191, 36, 0.7);
+    animation: agvDotPulse 1.4s ease-in-out infinite;
+}
+
+/* 오류 발생 - 빨간색, 조금 더 빠르게 깜빡여서 눈에 띄게 함 */
+.agv-dot-error {
+    background-color: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+    animation: agvDotPulse 0.8s ease-in-out infinite;
+}
+
+@keyframes agvDotPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
 }
 
 /* 급수 기록 (상시 패널) */
